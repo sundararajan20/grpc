@@ -41,6 +41,8 @@ using grpc::Status;
 using helloworld::Greeter;
 using helloworld::HelloReply;
 using helloworld::HelloRequest;
+using helloworld::MessageSizeReply;
+using helloworld::MessageSizeRequest;
 
 ABSL_FLAG(uint16_t, port, 50051, "Server port for the service");
 
@@ -50,6 +52,14 @@ class GreeterServiceImpl final : public Greeter::Service {
                   HelloReply* reply) override {
     std::string prefix("Hello ");
     reply->set_message(prefix + request->name());
+    return Status::OK;
+  }
+
+  Status GetMessageOfSize(ServerContext* context, const MessageSizeRequest* request,
+                  MessageSizeReply* reply) override {
+    std::string str;
+    str.resize(request->size(), '+');
+    reply->set_data(str);
     return Status::OK;
   }
 };
@@ -66,6 +76,10 @@ void RunServer(uint16_t port) {
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
+  // Set max message size
+  builder.SetMaxSendMessageSize(1024 * 1024 * 1024);
+  builder.SetMaxReceiveMessageSize(1024 * 1024 * 1024);
+  builder.SetMaxMessageSize(1024 * 1024 * 1024);
   // Finally assemble the server.
   std::unique_ptr<Server> server(builder.BuildAndStart());
   std::cout << "Server listening on " << server_address << std::endl;
